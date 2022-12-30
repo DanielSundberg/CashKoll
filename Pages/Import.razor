@@ -6,14 +6,25 @@
 @inject DbService DbService
 @inject IConfiguration Configuration
 
-<PageTitle>Import tool</PageTitle>
+<PageTitle>CashKoll - importverktyg</PageTitle>
 
-<h1>Import tool</h1>
+<h1>Importverktyg</h1>
 
 <div class="container-fluid">
     <div class="row">
         <div class="col">
             <textarea class="text" style="width: 100%;height: 200px" @bind="@textToImport"></textarea>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            Format: &lt;Datum:yyyy/MM/dd&gt;;&lt;Belopp:-0,00&gt;;;;;&lt;Beskrivning&gt;;;
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            Exempel: 2022/01/01;-10000,00;123456789;;;Sparande importerad aggregering;0;SEK
         </div>
     </div>
 
@@ -144,24 +155,30 @@
         using(var textReader = new StringReader(textToImport))
         {
             // First line is header
-            textReader.ReadLine();
-
             string line;
             while ((line = textReader.ReadLine()) != null) 
             {
                 var fields = line.Split(";");
-                var accountLIne = new AccountLine() 
+                try 
                 {
-                    Id = id++,
-                    Timestamp = DateTime.ParseExact(fields[0], "yyyy/MM/dd", CultureInfo.InvariantCulture), 
-                    Amount = Convert.ToInt64(Double.Parse(fields[1]) * 1000),
-                    Account = expenseAccountId,
-                    Description = fields[5],
-                    Currency = 1,
-                    Category = GetCategoryOrDefault(fields[5], out var mapped),
-                    CategoryMapFound = mapped
-                };
-                newItems.Add(accountLIne);
+                    var accountLIne = new AccountLine() 
+                    {
+                        Id = id++,
+                        Timestamp = DateTime.ParseExact(fields[0], "yyyy/MM/dd", CultureInfo.InvariantCulture), 
+                        Amount = Convert.ToInt64(Double.Parse(fields[1]) * 1000),
+                        Account = expenseAccountId,
+                        Description = fields[5],
+                        Currency = 1,
+                        Category = GetCategoryOrDefault(fields[5], out var mapped),
+                        CategoryMapFound = mapped
+                    };
+                    newItems.Add(accountLIne);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Could not parse line: {line}");
+                    Console.WriteLine(ex);
+                }
             }
         }
         accountLines = newItems.AsQueryable();
