@@ -5,10 +5,9 @@ This project started with and Excel sheet I've been using to track my personal f
 
 ## Features
 * Show cash spent on different categories of expenses
-* Local SQLite database
+* Using local SQLite database - your finance data never leaves your computer
 * CSV import of data, <a href="https://www.nordea.se/">Nordea</a> CSV format supported by default
 * Using Blazor for UI
-* Your finance data never leaves your computer
 
 ## Screeshot
 
