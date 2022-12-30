@@ -1,7 +1,7 @@
 # CashKoll
-Personal finance tracker created with simplicity and privacy in mind (the data never leaves your computer).
+Personal finance manager created with simplicity and privacy in mind (the data never leaves your computer).
 
-Port to .Net 7 of the Excel sheet I've been using to track my personal finances.
+This project started with and Excel sheet I've been using to track my personal finances. Created this port to .Net 7 and Blazor mostly to learn the Blazor UI framework.
 
 ## Features
 * Show cash spent on different categories of expenses
