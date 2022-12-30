@@ -9,6 +9,7 @@ Port to .Net 7 of the Excel sheet I've been using to track my personal finances.
 * CSV import of data, Nordea CSV format supported by default
 * Using Blazor for UI
 * Using local SQLite database for data storage 
+* For now UI only in Swedish
 
 ## Screeshot
 
