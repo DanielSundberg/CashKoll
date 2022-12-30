@@ -5,11 +5,11 @@ Port to .Net 7 of the Excel sheet I've been using to track my personal finances.
 
 ## Features
 * Show cash spent on different categories of expenses
-* Local database
-* CSV import of data, Nordea CSV format supported by default
+* Local SQLite database
+* CSV import of data, <a href="https://www.nordea.se/">Nordea</a> CSV format supported by default
 * Using Blazor for UI
-* Using local SQLite database for data storage 
 * For now UI only in Swedish
+* Your finance data never leaves your computer
 
 ## Screeshot
 
