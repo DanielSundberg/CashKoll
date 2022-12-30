@@ -1,0 +1,314 @@
+﻿@page "/accounts"
+@using System.Globalization
+@using CashKollen.Data
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+@inject DbService DbService
+@inject IConfiguration Configuration
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Konton</PageTitle>
+
+<h1>Konton</h1>
+
+<div class="container-fluid">
+    <div class="row space-below">
+        <div class="col-1">
+            Konton: 
+        </div>
+        <div class="col-2">
+            <select @bind="@SelectedAccountId" style="min-width: 150px;">
+                @foreach (var acc in accounts)
+                {
+                    <option value="@acc.Id">@acc.Name</option>
+                }
+            </select> 
+        </div>
+        <div class="col-7 text-end">
+            <button class="btn btn-primary" style="min-width: 100px; margin-right: 6.5em;" @onclick="AddNew">Lägg till</button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-1">
+            Från:
+        </div>
+        <div class="col-2">
+            <input type="date" style="min-width: 150px" @bind-value="From">
+        </div>
+        <div class="col-1">
+            Till:
+        </div>
+        <div class="col-2">
+            <input type="date" style="min-width: 150px" @bind-value="To">
+        </div>
+        <div class="col-1">
+            Kategori:
+        </div>
+        <div class="col-2">
+            <select @bind="@(CategoryId)" style="min-width: 150px;">
+                <option></option>
+                @foreach (var cat in categories)
+                {
+                    <option value="@cat.Id">@cat.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+    <div class="row" style="margin-top: 1em; margin-bottom: 1em;">
+        <div class="col-1">
+            Beskrivning:
+        </div>
+        <div class="col-5">
+            <input type="text" style="width: 100%;" @bind-value="@(SearchText)">
+        </div>
+    </div>
+    <div class="row"></div>
+    <div class="grid">
+        <QuickGrid Items="@accountLines" Pagination="@pagination">
+            <PropertyColumn Property="@(l => l.Timestamp)" Title="Datum" Format="yyyy-MM-dd" Sortable="true" />
+            <PropertyColumn Property="@(l => l.Description)" Title="Beskrivning"/>
+            <PropertyColumn Property="@(l => $"{l.Amount/1000:0.00}")" Title="Belopp" />
+            <PropertyColumn Property="@(l => $"{l.Balance/1000:0.00}")" Title="Saldo" />
+            <PropertyColumn Property="@(l => l.CategoryName)" Title="Kategori" />
+            <TemplateColumn Title="Åtgärder">
+                <button @onclick="@(() => EditTrans(context))" class="btn btn-primary"><span class="oi oi-pencil"></span></button>
+                <button @onclick="@(() => DeleteTrans(context))" class="btn btn-primary"><span class="oi oi-circle-x"></span></button>
+            </TemplateColumn>
+        </QuickGrid>
+    </div>
+    <Paginator Value="@pagination" />
+    <div class="row">
+        <div class="col">
+            Summa: <b>@($"{totalSum:0}")</b>
+        </div>
+    </div>
+</div>
+@if (showModal)
+{
+    <div class="modal fade show" id="myModal" style="display:block" aria-modal="true" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h4 class="modal-title">@modalHeader</h4>
+                    <button type="button" class="close" @onclick="@ModalCancel">&times;</button>
+                </div>
+
+                <!-- Modal body -->
+                <div class="modal-body container">
+                    <div class="row">
+                        <div class="col">
+                            Konto:
+                        </div>
+                        <div class="col">
+                            <select @bind="@(SelectedAccountLine.Account)" style="min-width: 300px;">
+                                @foreach (var acc in accounts)
+                                {
+                                    <option value="@acc.Id">@acc.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            Datum:
+                        </div>
+                        <div class="col">
+                            <input type="date" @bind="@(SelectedAccountLine.Timestamp)" style="min-width: 300px;" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            Beskrivning:
+                        </div>
+                        <div class="col">
+                            <input type="text" @bind="@(SelectedAccountLine.Description)" style="min-width: 300px;" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            Belopp:
+                        </div>
+                        <div class="col">
+                            <input value="@(SelectedAccountLine.AmountAsString())" @onchange="@((ChangeEventArgs __e) => SelectedAccountLine.UpdateAmount(__e?.Value?.ToString()))" style="min-width: 300px;"/>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            Saldo:
+                        </div>
+                        <div class="col">
+                            <input value="@(SelectedAccountLine.BalanceAsString())" @onchange="@((ChangeEventArgs __e) => SelectedAccountLine.UpdateBalance(__e?.Value?.ToString()))" style="min-width: 300px;"/>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            Kategori:
+                        </div>
+                        <div class="col">
+                            <select @bind="@(SelectedAccountLine.Category)" style="min-width: 300px;">
+                                @foreach (var cat in categories)
+                                {
+                                    <option value="@cat.Id">@cat.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Modal footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn" @onclick="@ModalCancel">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick=@ModalOk>Spara</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    PaginationState pagination = new PaginationState { ItemsPerPage = 100 };
+    private IQueryable<AccountLine> accountLines = (new List<AccountLine>()).AsQueryable();
+    private IEnumerable<Category> categories;
+    private string modalHeader = "Redigera transaktion";
+    private int DefaultCategory = 10;
+
+    bool showModal = false;
+
+    private Account[] accounts;
+    private DateTime from = new DateTime(DateTime.Now.Year, 1, 1), to = new DateTime(DateTime.Now.Year, 12, 31);
+    private DateTime From {
+        get {
+            return from;
+        }
+        set 
+        {
+            from = value;
+            Search();
+        }
+    }
+    private DateTime To {
+        get {
+            return to;
+        }
+        set 
+        {
+            to = value;
+            Search();
+        }
+    }
+    private int SelectedAccountId {
+        get {
+            return selectedAccountId;
+        }
+        set 
+        {
+            selectedAccountId = value;
+            Search();
+        }
+    }
+    private int categoryId;
+    private int CategoryId {
+        get {
+            return categoryId;
+        }
+        set {
+            categoryId = value;
+            Search();
+        }
+    }
+
+    private string searchText = "";
+    private string SearchText {
+        get {
+            return searchText;
+        }
+        set {
+            searchText = value;
+            Search();
+        }
+    }
+
+    private int selectedAccountId = 1;
+    private double totalSum;
+
+    void EditTrans(AccountLine context) {
+        modalHeader = "Redigera transaktion";
+        SelectedAccountLine = context;
+        Console.WriteLine($"{SelectedAccountLine.Description}");
+        showModal = true;
+    }
+
+    private void AddNew()
+    {
+        modalHeader = "Ny transaktion";
+        SelectedAccountLine = new AccountLine() 
+        {
+            Id = 0,
+            Amount = 0,
+            Balance = 0,
+            Category = DefaultCategory,
+            Currency = 1,
+            Account = SelectedAccountId,
+            Description = "",
+            Timestamp = From
+        };
+        showModal = true;
+    }
+    async void DeleteTrans(AccountLine context) {
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Radera transaktion?");
+        Console.WriteLine($"Confirm delete: {confirmed}");
+        if (confirmed)
+        {
+            var nofDeleted = await DbService.DeleteTrans(context);
+            Console.WriteLine($"Deleted {nofDeleted} items.");
+            Search();
+            InvokeAsync(() => StateHasChanged());
+        }
+    }
+
+    private AccountLine SelectedAccountLine { get; set; }
+    void ModalCancel()
+    {
+        Search();
+        showModal = false;
+    }
+
+    async void ModalOk()
+    {
+        Console.WriteLine("Saving..." + SelectedAccountLine.ToString());
+        if (SelectedAccountLine.Id == 0)
+        {
+            var nofItems = await DbService.SaveTrans(SelectedAccountLine);
+            Console.WriteLine($"Created {nofItems} db items");
+        }
+        else
+        {
+            var nofItems = await DbService.UpdateTrans(SelectedAccountLine);
+            Console.WriteLine($"Updated {nofItems} db items");
+        }
+        
+        showModal = false;
+        Search();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories =await  DbService.GetCategories();
+        accounts = await DbService.GetAccouts();
+        Search();
+    }
+
+    private async void Search()
+    {
+        Console.WriteLine($"Search: accountId={selectedAccountId}, from={from}, to={to}, category={CategoryId}, text={SearchText}");
+        accountLines = (await DbService.SearchTrans(selectedAccountId, from, to, CategoryId, SearchText)).AsQueryable();
+        totalSum = accountLines.Sum(l => l.Amount) / 1000.0;
+        Console.WriteLine($"Trans count: {accountLines.Count()}, sum: {totalSum:0}");
+    }
+}

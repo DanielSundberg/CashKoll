@@ -1,0 +1,251 @@
+﻿@page "/importtool"
+@using System.Globalization
+@using CashKollen.Data
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+@inject DbService DbService
+@inject IConfiguration Configuration
+
+<PageTitle>Import tool</PageTitle>
+
+<h1>Import tool</h1>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <textarea class="text" style="width: 100%;height: 200px" @bind="@textToImport"></textarea>
+        </div>
+    </div>
+
+    <button class="btn btn-primary" @onclick="InterpretText">Tolka CSV</button>
+
+    <QuickGrid Items="@accountLines">
+        @* <PropertyColumn Property="@(l => l.Id)" Sortable="true" /> *@
+        <PropertyColumn Property="@(l => l.Timestamp)" Title="Datum" Format="yyyy-MM-dd" Sortable="true" />
+        <TemplateColumn Title="Beskrivning">
+            <input @bind="context.Description" style="min-width: 350px;"/>
+        </TemplateColumn>
+        <TemplateColumn Title="Belopp">
+            <input value="@(context.AmountAsString())" @onchange="@((ChangeEventArgs __e) => context.UpdateAmount(__e?.Value?.ToString()))" style="max-width: 100px;"/>
+        </TemplateColumn>
+        <TemplateColumn Title="Kategori">
+            <select @bind="context.Category" style="@(!context.CategoryMapFound ? "background: lightyellow;" : "")">
+                @foreach (var cat in categories)
+                {
+                    <option value="@cat.Id">@cat.Name</option>
+                }
+            </select>
+        </TemplateColumn>
+        <TemplateColumn Title="Mappad">
+            <span class="oi @(context.CategoryMapFound ? "oi-check" : "oi-circle-x")" aria-hidden="true"></span>
+        </TemplateColumn>
+        <TemplateColumn Title="Åtgärder">
+            <button @onclick="@(() => Split(context))">Dela</button>
+            <button @onclick="@(() => Remove(context))">Ta bort</button>
+            <button @onclick="@(() => Map(context))">Mappa</button>
+            <button @onclick="@(() => ModalShow(context))">Lägg till</button>
+        </TemplateColumn>
+    </QuickGrid>
+
+    <button class="btn btn-primary" @onclick="DoImport">Importera</button>
+    <label>@(importMessage)</label>
+</div>
+@if (showModal)
+{
+    <div class="modal fade show" id="myModal" style="display:block" aria-modal="true" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h4 class="modal-title">Lägg till mappning</h4>
+                    <button type="button" class="close" @onclick="@ModalCancel">&times;</button>
+                </div>
+
+                <!-- Modal body -->
+                <div class="modal-body container">
+                    <div class="row">
+                        <div class="col">
+                            Filter:
+                        </div>
+                        <div class="col">
+                            <input @bind="@modalFilter" style="min-width: 300px;" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            Kategori:
+                        </div>
+                        <div class="col">
+                            <select @bind="@modalSelectedCategory" style="min-width: 300px;">
+                                @foreach (var cat in categories)
+                                {
+                                    <option value="@cat.Id">@cat.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn" @onclick="@ModalCancel">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick=@ModalOk>Spara</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    private string textToImport = "";
+    private IQueryable<AccountLine> accountLines = (new List<AccountLine>()).AsQueryable();
+    private IEnumerable<Category> categories;
+    private IEnumerable<CategoryMap> categoryMap;
+    private int DefaultCategory = 10;
+    private string modalFilter = "";
+    private int modalSelectedCategory;
+    private string importMessage = "";
+
+    bool showModal = false;
+
+    void ModalShow(AccountLine context) {
+         modalFilter = context.Description;
+         SelectedAccountLine = context;
+         modalSelectedCategory = GetCategoryOrDefault(context.Description, out var _);
+         showModal = true;
+    }
+    private AccountLine SelectedAccountLine { get; set; }
+    void ModalCancel() => showModal = false;
+    async void ModalOk()
+    {
+        Console.WriteLine($"Creating category maping, expr='{modalFilter}', categoryId='{modalSelectedCategory}'");
+        var nofItems = await DbService.SaveCategoryMap(modalFilter, modalSelectedCategory);
+        Console.WriteLine($"Created {nofItems} db items");
+        categoryMap = await DbService.GetCategoryMap();
+        SelectedAccountLine.Category = modalSelectedCategory;
+        showModal = false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories =await  DbService.GetCategories();
+        categoryMap = await DbService.GetCategoryMap();
+        Console.WriteLine(string.Join(",", categories.Select(c => c.Id)));
+    }
+
+    private void InterpretText()
+    {
+        var newItems = new List<AccountLine>();
+        var id = 0;
+        var expenseAccountId = Convert.ToInt32(Configuration["ExpenseAccountId"]);
+        using(var textReader = new StringReader(textToImport))
+        {
+            // First line is header
+            textReader.ReadLine();
+
+            string line;
+            while ((line = textReader.ReadLine()) != null) 
+            {
+                var fields = line.Split(";");
+                var accountLIne = new AccountLine() 
+                {
+                    Id = id++,
+                    Timestamp = DateTime.ParseExact(fields[0], "yyyy/MM/dd", CultureInfo.InvariantCulture), 
+                    Amount = Convert.ToInt64(Double.Parse(fields[1]) * 1000),
+                    Account = expenseAccountId,
+                    Description = fields[5],
+                    Currency = 1,
+                    Category = GetCategoryOrDefault(fields[5], out var mapped),
+                    CategoryMapFound = mapped
+                };
+                newItems.Add(accountLIne);
+            }
+        }
+        accountLines = newItems.AsQueryable();
+    }
+
+    private async void DoImport()
+    {
+        try
+        {
+            int importCount = 0;
+            foreach (var line in accountLines)
+            {
+                var nofItems = await DbService.SaveTrans(line);
+                importCount += nofItems;
+            }
+            importMessage = $"Importerade {importCount} transaktioner.";
+            textToImport = "";
+            accountLines = (new List<AccountLine>()).AsQueryable(); 
+        }
+        catch (Exception ex)
+        {
+            importMessage = $"Fel: {ex.Message}";
+            Console.WriteLine(ex);
+        }
+    }
+
+    void Split(AccountLine line)
+    {
+        var itemToSplit = accountLines.SingleOrDefault(l => l.Id == line.Id);
+        if (itemToSplit != null)
+        {
+            var list = accountLines.ToList();
+            var newItem = new AccountLine() {
+                Id = list.Count,
+                Timestamp = itemToSplit.Timestamp, 
+                Amount = 0,
+                Account = itemToSplit.Account,
+                Description = itemToSplit.Description,
+                Currency = itemToSplit.Currency,
+                Category = itemToSplit.Category,
+                CategoryMapFound = itemToSplit.CategoryMapFound
+            };
+            var position = list.IndexOf(itemToSplit);
+            list.Insert(position + 1, newItem);
+            accountLines = list.AsQueryable();
+        }
+    }
+
+    void Remove(AccountLine line)
+    {
+        var itemToRemove = accountLines.SingleOrDefault(l => l.Id == line.Id);
+        if (itemToRemove != null)
+        {
+            var list = accountLines.ToList();
+            if (list.Remove(itemToRemove)) {
+                accountLines = list.AsQueryable();
+            }
+        }
+    }
+
+    void Map(AccountLine line)
+    {
+        line.Category = GetCategoryOrDefault(line.Description, out var _);
+    }
+
+
+    int GetCategoryOrDefault(string lineDescription, out bool mapped)
+    {
+        var mappedCategory = categoryMap.Where(cm => lineDescription.Contains(cm.Expression));
+        if (mappedCategory?.Count() == 1)
+        {
+            mapped = true;
+            return mappedCategory.First().CategoryId;
+        }
+        else if (mappedCategory?.Count() > 1)
+        {
+            Console.WriteLine($"Multiple matches for line='{lineDescription}', {string.Join(",", mappedCategory.Select(c => c.Expression))}");
+            mapped = false;
+            return DefaultCategory;
+        }
+        else
+        {
+            mapped = false;
+            return DefaultCategory;
+        }
+    }
+}

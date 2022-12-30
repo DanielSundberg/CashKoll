@@ -1,0 +1,274 @@
+﻿@page "/"
+
+@using CashKollen.Data
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+@inject DbService DbService
+@inject IConfiguration Configuration
+
+<PageTitle>CashKollen</PageTitle>
+
+<h1>CashKollen - sammanställning</h1>
+
+<h2>Per år</h2>
+
+<div class="row space-below">
+    <div class="col-2">
+        Visa från år:
+    </div>
+    <div class="col-2">
+        <select @bind="@sinceYear" style="min-width: 100px;">
+            @foreach (var year in allYears)
+            {
+                <option value="@year">@year</option>
+            }
+        </select>
+    </div>
+    <div class="col-2">
+        <input type="checkbox" @bind="@showPerMonth" />Visa per månad
+    </div>
+    <div class="col-3">
+        <input type="checkbox" @bind="@showDiff" />Visa skillnad mot föregående
+    </div>
+
+</div>
+
+@if (accountSummaryAllYears == null)
+{
+    <p><em>Laddar...</em></p>
+}
+else
+{
+     <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Kategori</th>
+                @foreach (var year in allYears.Where(y => y >= sinceYear))
+                {
+                    <th class="text-end">@($"{year}")</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cat in categories)
+            {
+                <tr>
+                    <td>@cat</td>
+                    @foreach (var year in allYears.Where(y => y >= sinceYear))
+                    {
+                        int nofMonthsForYear = year == DateTime.Now.Year ? DateTime.Now.Month : 12; 
+                        var val = Math.Abs(summaryPerYearDict[(year, cat)]/(showPerMonth ? nofMonthsForYear : 1));
+                        var prev = Math.Abs(summaryPerYearDict[(year-1, cat)]/(showPerMonth ? nofMonthsForYear : 1));
+                        var diff = val - prev;
+                        var diffPercentage = ((diff)/(prev == 0 ? 1: prev))*100;
+                        @if (showDiff)
+                        {
+                            @if (diffPercentage > 5)
+                            {
+                                <td class="text-end">@($"{val:0}") <span class="oi oi-arrow-circle-top green-icon" title="Ökat med @($"{diffPercentage:0.0}%") (@($"{diff:0}kr)")"></span></td>
+                            }
+                            else if (diffPercentage < -5)
+                            {
+                                <td class="text-end">@($"{val:0}") <span class="oi oi-arrow-circle-bottom red-icon" title="Minskat med @($"{-diffPercentage:0.0}%") (@($"{-diff:0}kr)")"></span></td>
+                            }
+                            else
+                            {
+                                <td class="text-end">@($"{val:0}") <span class="oi oi-arrow-circle-right grey-icon" title="Skillnad @($"{diffPercentage:0.0}%") (@($"{diff:0}kr)")"></span></td>
+                            }
+                            
+                        }
+                        else
+                        {
+                            <td class="text-end">@($"{val:0}")</td>
+                        }
+                        
+                    }
+                </tr>
+            }
+            <tr>
+                <td><b>Summa:</b></td>
+                @foreach (var year in allYears.Where(y => y >= sinceYear))
+                {
+                    <td class="text-end">@($"{accountSummaryAllYears.Where(s => s.Year == year).Select(s => s.Amount).Sum()/(showPerMonth ? 12 : 1):0}")</td>
+                }
+            </tr>
+        </tbody>
+    </table>
+}
+
+<h2>Per månad</h2>
+
+<div class="row space-below">
+    <div class="col">
+        @foreach (var year in yearsToSelect)
+        {
+            <input type="checkbox" checked="@(selectedYears.Contains(year))" 
+                @onchange="eventArgs => { yearCheckboxClicked(year, eventArgs.Value); }"/>@year
+        }
+    </div>
+</div>
+<div class="row space-below">
+    <div class="col">
+        @foreach (var month in monthsToSelect)
+        {
+            <input type="checkbox" checked="@(selectedMonths.Contains(month))" 
+                @onchange="eventArgs => { monthCheckboxClicked(month, eventArgs.Value); }"/>@month
+        }
+    </div>
+</div>
+
+@if (accountSummaryThisYear == null)
+{
+    <p><em>Laddar...</em></p>
+}
+else
+{
+     <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Kategori</th>
+                @foreach (var month in accountSummaryThisYear.Select(s => s.Month).Distinct())
+                {
+                    @foreach (var year in accountSummaryThisYear.Select(s => s.Year).Distinct())
+                    {
+                        <th class="text-end">@($"{year}-{month}")</th>
+                    }
+                    
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cat in categories)
+            {
+                <tr>
+                    <td>@cat</td>
+                    @foreach (var month in months)
+                    {
+                        foreach (var year in years)
+                        {
+                            <td class="text-end">@($"{Math.Abs(summaryPerMonthDict[(month, year, cat)]):0}")</td>
+                        }
+                    }
+                </tr>
+            }
+            <tr>
+                <td><b>Summa:</b></td>
+                @foreach (var year in years)
+                {
+                    foreach (var month in months)
+                    {
+                        <td class="text-end">@($"{accountSummaryThisYear.Where(s => s.Month == month && s.Year == year).Select(s => s.Amount).Sum():0}")</td>
+                    }
+                }
+            </tr>
+        </tbody>
+    </table>
+}
+
+@code {
+    private AccountSummary[]? accountSummaryThisYear;
+    private AccountSummary[]? accountSummaryAllYears;
+    private IDictionary<(int, int, string), double> summaryPerMonthDict = new Dictionary<(int, int, string), double>();
+    private IDictionary<(int, string), double> summaryPerYearDict = new Dictionary<(int, string), double>();
+    private IList<int> months = new List<int>();
+    private IList<int> years = new List<int>();
+    private IList<int> allYears = new List<int>();
+    private IList<string> categories = new List<string>();
+    private IList<string> selectedYears = new List<string>() { DateTime.Now.Year.ToString() };
+    private IList<string> selectedMonths = Enumerable.Range(1, 12).Select(m => $"{m:00}").ToList();
+    private IList<string> yearsToSelect =  new List<string>();
+    private IList<string> monthsToSelect = Enumerable.Range(1, 12).Select(m => $"{m:00}").ToList();
+    private int sinceYear;
+    private bool showPerMonth = true;
+    private bool showDiff = true;
+    private int expenseAccountId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        expenseAccountId = Convert.ToInt32(Configuration["ExpenseAccountId"]);
+        Console.WriteLine($"expenseAccountId: {expenseAccountId}");
+        for (int i = 2020; i <= DateTime.Now.Year; i++)
+        {
+            yearsToSelect.Add(i.ToString());
+        }
+        categories = DbService.GetCategories().Result.Select(c => c.Name).ToList();
+        await FetchData();
+        accountSummaryAllYears = await DbService.GetAccountSummayAllYears(expenseAccountId);
+        allYears = accountSummaryAllYears.Select(s => s.Year).Distinct().ToList();
+        sinceYear = DateTime.Now.AddYears(-5).Year;
+        foreach (var year in allYears)
+        {
+            foreach (var category in categories)
+            {
+                summaryPerYearDict.Add((year, category), accountSummaryAllYears.SingleOrDefault(s => s.Name == category && s.Year == year)?.Amount ?? 0.0);
+            }
+        }
+        // Add one extra year at start so that we can get difference from last year for all
+        var yearZero = allYears.Min()-1;
+        foreach (var category in categories)
+        {
+            summaryPerYearDict.Add((yearZero, category), 0.0);
+        }
+    }
+
+    private async Task FetchData()
+    {
+        accountSummaryThisYear = await DbService.GetAccountSummayThisYear(expenseAccountId, selectedYears, selectedMonths);
+        summaryPerMonthDict.Clear();
+        months = accountSummaryThisYear.Select(s => s.Month).Distinct().ToList();
+        years = accountSummaryThisYear.Select(s => s.Year).Distinct().ToList();
+        //categories = accountSummaryThisYear.Select(s => s.Name).Distinct().ToList();
+        foreach (var month in months)
+        {
+            foreach (var year in years)
+            {
+                foreach (var category in categories)
+                {
+                    summaryPerMonthDict.Add((month, year, category), accountSummaryThisYear.SingleOrDefault(s => s.Name == category && s.Month == month && s.Year == year)?.Amount ?? 0.0);
+                }
+            }
+        }
+    }
+
+    async void yearCheckboxClicked(string year, object checkedValue)
+    {
+        Console.WriteLine($"Year: {year}");
+        if ((bool)checkedValue)
+        {
+            if (!selectedYears.Contains(year))
+            {
+                selectedYears.Add(year);
+            }
+        }
+        else
+        {
+            if (selectedYears.Contains(year))
+            {
+                selectedYears.Remove(year);
+            }
+        }
+        Console.WriteLine($"Selected years: {string.Join(",", selectedYears)}");
+        await FetchData();
+    }
+
+    void monthCheckboxClicked(string month, object checkedValue)
+    {
+        Console.WriteLine($"Month: {month}");
+        if ((bool)checkedValue)
+        {
+            if (!selectedMonths.Contains(month))
+            {
+                selectedMonths.Add(month);
+            }
+        }
+        else
+        {
+            if (selectedMonths.Contains(month))
+            {
+                selectedMonths.Remove(month);
+            }
+        }
+        Console.WriteLine($"Selected months: {string.Join(",", selectedMonths)}");
+        FetchData();
+    }
+}

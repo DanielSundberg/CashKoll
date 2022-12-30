@@ -1,0 +1,158 @@
+﻿@page "/forecast"
+
+@using CashKollen.Data
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+@inject DbService DbService
+@inject IConfiguration Configuration
+
+<PageTitle>CashKollen</PageTitle>
+
+<h1>CashKollen - sparande</h1>
+
+<div class="row space-below">
+    <div class="col-2">
+        Konto:
+    </div>
+    <div class="col-2">
+        <select @bind="@(selectedAccount)" style="min-width: 100px;">
+            @foreach (var acc in accounts)
+            {
+                <option value="@acc.Id">@acc.Name</option>
+            }
+        </select>
+    </div>
+</div>
+<div class="row space-below">
+    <div class="col-2">
+        Slutår:
+    </div>
+    <div class="col-2">
+        <input type="text" @bind-value="@(endYear)" style="max-width: 100px;"/>
+    </div>
+    <div class="col-2">
+        Sparande per år:
+    </div>
+    <div class="col-2">
+        <input type="text" @bind-value="@(savingsPerYear)" style="max-width: 100px;"/> kr
+    </div>
+    <div class="col-2">
+        Aktuellt sparande:
+    </div>
+    <div class="col-2">
+        <input type="text" @bind-value="@(savingsBalanceToStartWith)" style="max-width: 100px;" /> kr
+    </div>
+</div>
+<div class="row space-below">
+    <div class="col-2">
+        Avkastning 1:
+    </div>
+    <div class="col-2">
+        <input type="text" @bind-value="@(payoff1)" style="max-width: 100px;" /> %
+    </div>
+    <div class="col-2">
+        Avkastning 2:
+    </div>
+    <div class="col-2">
+        <input type="text" @bind-value="@(payoff2)" style="max-width: 100px;" /> %
+    </div>
+    <div class="col-2">
+        Avkastning 3:
+    </div>
+    <div class="col-2">
+        <input type="text" @bind-value="@(payoff3)" style="max-width: 100px;" /> %
+    </div>
+</div>
+<div class="row space-below">
+    <div class="col-2">
+        <button type="button" class="btn btn-primary" @onclick=@Recalc>Räkna om</button>
+    </div>
+</div>
+
+@if (accountSummaryAllYears == null)
+{
+    <p><em>Laddar...</em></p>
+}
+else
+{
+     <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>År</th>
+                <th class="text-end">@payoff1 %</th>
+                <th class="text-end">@payoff2 %</th>
+                <th class="text-end">@payoff3 %</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var year in forecastDict.Keys)
+            {
+                <tr>
+                    <td>@year</td>
+                    <td class="text-end">@($"{forecastDict[year].Item1:0}")</td>
+                    <td class="text-end">@($"{forecastDict[year].Item2:0}")</td>
+                    <td class="text-end">@($"{forecastDict[year].Item3:0}")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+    private AccountSummary[]? accountSummaryAllYears;
+    private int savingsAccountId, expenseAccountId;
+    private int selectedAccount;
+    private Account[] accounts;
+    private string savingsPerYear = "100000";
+    private string endYear = "2043";
+    private string payoff1 = "3", payoff2 = "7", payoff3 = "10";
+    private double savingsBalanceToStartWith;
+    private Dictionary<int, (double, double, double)> forecastDict = new Dictionary<int, (double, double, double)>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        savingsAccountId = Convert.ToInt32(Configuration["SavingsAccountId"]);
+        expenseAccountId = Convert.ToInt32(Configuration["ExpenseAccountId"]);
+        accounts = await DbService.GetAccouts();
+        selectedAccount = savingsAccountId;
+        accountSummaryAllYears = await DbService.GetAccountSummayAllYears(expenseAccountId);
+        FetchSavingsBalance();
+    }
+
+    private void Recalc()
+    {
+        FetchSavingsBalance();
+    }
+
+    private async void FetchSavingsBalance()
+    {
+        var savingsTrans = (await DbService.SearchTrans(savingsAccountId, DateTime.Now.AddYears(-5), DateTime.Now)).OrderByDescending(t => t.Timestamp);
+        var transToStartWith = savingsTrans.FirstOrDefault();
+        savingsBalanceToStartWith = (transToStartWith?.Balance ?? 0) / 1000.0;
+        var lastYearWithRealBalance = transToStartWith?.Timestamp.Year ?? DateTime.Now.Year;
+
+        // First plot last 5 years or so from real data
+        var startYear = DateTime.Now.AddYears(-4).Year;
+        var endYearInt = Convert.ToInt32(endYear);
+        double lastBal = 0.0;
+        forecastDict.Clear();
+        for (int i = startYear; i <= lastYearWithRealBalance; i++)
+        {
+            var balanceForYear = (savingsTrans.Where(t => t.Timestamp.Year == i).FirstOrDefault()?.Balance ?? 0) / 1000.0;
+            lastBal = balanceForYear;
+            forecastDict.Add(i, (balanceForYear, balanceForYear, balanceForYear));
+        }
+        double lastBal1 = lastBal, lastBal2 = lastBal, lastBal3 = lastBal;
+        for (int i = lastYearWithRealBalance + 1; i <= endYearInt; i++)
+        {
+            var x1 = (Convert.ToInt32(payoff1) + 100) / 100.0;
+            var x2 = (Convert.ToInt32(payoff2) + 100) / 100.0;
+            var x3 = (Convert.ToInt32(payoff3) + 100) / 100.0;
+            lastBal1 = (lastBal1 + Convert.ToDouble(savingsPerYear)) * x1;
+            lastBal2 = (lastBal2 + Convert.ToDouble(savingsPerYear)) * x2;
+            lastBal3 = (lastBal3 + Convert.ToDouble(savingsPerYear)) * x3;
+            forecastDict.Add(i, (lastBal1, lastBal2, lastBal3));
+        }
+    }
+}
