@@ -6,9 +6,9 @@
 @inject DbService DbService
 @inject IConfiguration Configuration
 
-<PageTitle>CashKoll - importverktyg</PageTitle>
+<PageTitle>CashKoll - import tool</PageTitle>
 
-<h1>Importverktyg</h1>
+<h1>Import tool</h1>
 
 <div class="container-fluid">
     <div class="row">
@@ -19,27 +19,26 @@
 
     <div class="row">
         <div class="col-12">
-            Format: &lt;Datum:yyyy/MM/dd&gt;;&lt;Belopp:-0,00&gt;;;;;&lt;Beskrivning&gt;;;
+            Format: &lt;Date:yyyy/MM/dd&gt;;&lt;Amount:-0,00&gt;;;;;&lt;Description&gt;;;
         </div>
     </div>
     <div class="row">
         <div class="col-12">
-            Exempel: 2022/01/01;-10000,00;123456789;;;Sparande importerad aggregering;0;SEK
+            Exemple: 2022/01/01;-10000,00;123456789;;;Savings importerad aggregate;0;SEK
         </div>
     </div>
 
-    <button class="btn btn-primary" @onclick="InterpretText">Tolka CSV</button>
+    <button class="btn btn-primary" @onclick="InterpretText">Interpret CSV</button>
 
     <QuickGrid Items="@accountLines">
-        @* <PropertyColumn Property="@(l => l.Id)" Sortable="true" /> *@
-        <PropertyColumn Property="@(l => l.Timestamp)" Title="Datum" Format="yyyy-MM-dd" Sortable="true" />
-        <TemplateColumn Title="Beskrivning">
+        <PropertyColumn Property="@(l => l.Timestamp)" Title="Date" Format="yyyy-MM-dd" Sortable="true" />
+        <TemplateColumn Title="Description">
             <input @bind="context.Description" style="min-width: 350px;"/>
         </TemplateColumn>
-        <TemplateColumn Title="Belopp">
+        <TemplateColumn Title="Amount">
             <input value="@(context.AmountAsString())" @onchange="@((ChangeEventArgs __e) => context.UpdateAmount(__e?.Value?.ToString()))" style="max-width: 100px;"/>
         </TemplateColumn>
-        <TemplateColumn Title="Kategori">
+        <TemplateColumn Title="Category">
             <select @bind="context.Category" style="@(!context.CategoryMapFound ? "background: lightyellow;" : "")">
                 @foreach (var cat in categories)
                 {
@@ -47,18 +46,18 @@
                 }
             </select>
         </TemplateColumn>
-        <TemplateColumn Title="Mappad">
+        <TemplateColumn Title="Mapped">
             <span class="oi @(context.CategoryMapFound ? "oi-check" : "oi-circle-x")" aria-hidden="true"></span>
         </TemplateColumn>
-        <TemplateColumn Title="Åtgärder">
-            <button @onclick="@(() => Split(context))">Dela</button>
-            <button @onclick="@(() => Remove(context))">Ta bort</button>
-            <button @onclick="@(() => Map(context))">Mappa</button>
-            <button @onclick="@(() => ModalShow(context))">Lägg till</button>
+        <TemplateColumn Title="Actions">
+            <button @onclick="@(() => Split(context))">Split</button>
+            <button @onclick="@(() => Remove(context))">Delete</button>
+            <button @onclick="@(() => Map(context))">Remap</button>
+            <button @onclick="@(() => ModalShow(context))">Add..</button>
         </TemplateColumn>
     </QuickGrid>
 
-    <button class="btn btn-primary" @onclick="DoImport">Importera</button>
+    <button class="btn btn-primary" @onclick="DoImport">Import</button>
     <label>@(importMessage)</label>
 </div>
 @if (showModal)
@@ -69,7 +68,7 @@
 
                 <!-- Modal Header -->
                 <div class="modal-header">
-                    <h4 class="modal-title">Lägg till mappning</h4>
+                    <h4 class="modal-title">Add mapping</h4>
                     <button type="button" class="close" @onclick="@ModalCancel">&times;</button>
                 </div>
 
@@ -77,7 +76,7 @@
                 <div class="modal-body container">
                     <div class="row">
                         <div class="col">
-                            Filter:
+                            Filter (contains):
                         </div>
                         <div class="col">
                             <input @bind="@modalFilter" style="min-width: 300px;" />
@@ -85,7 +84,7 @@
                     </div>
                     <div class="row">
                         <div class="col">
-                            Kategori:
+                            Category:
                         </div>
                         <div class="col">
                             <select @bind="@modalSelectedCategory" style="min-width: 300px;">
@@ -101,7 +100,7 @@
                 <!-- Modal footer -->
                 <div class="modal-footer">
                     <button type="button" class="btn" @onclick="@ModalCancel">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick=@ModalOk>Spara</button>
+                    <button type="button" class="btn btn-primary" @onclick=@ModalOk>Save</button>
                 </div>
 
             </div>
@@ -194,13 +193,13 @@
                 var nofItems = await DbService.SaveTrans(line);
                 importCount += nofItems;
             }
-            importMessage = $"Importerade {importCount} transaktioner.";
+            importMessage = $"Imported {importCount} transactions.";
             textToImport = "";
             accountLines = (new List<AccountLine>()).AsQueryable(); 
         }
         catch (Exception ex)
         {
-            importMessage = $"Fel: {ex.Message}";
+            importMessage = $"Error: {ex.Message}";
             Console.WriteLine(ex);
         }
     }

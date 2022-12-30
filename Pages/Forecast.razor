@@ -6,13 +6,13 @@
 @inject DbService DbService
 @inject IConfiguration Configuration
 
-<PageTitle>CashKoll - sparande</PageTitle>
+<PageTitle>CashKoll - forecast</PageTitle>
 
-<h1>Sparande</h1>
+<h1>Forecast</h1>
 
 <div class="row space-below">
     <div class="col-2">
-        Konto:
+        Account:
     </div>
     <div class="col-2">
         <select @bind="@(selectedAccount)" style="min-width: 100px;">
@@ -25,39 +25,39 @@
 </div>
 <div class="row space-below">
     <div class="col-2">
-        Slutår:
+        End year:
     </div>
     <div class="col-2">
         <input type="text" @bind-value="@(endYear)" style="max-width: 100px;"/>
     </div>
     <div class="col-2">
-        Sparande per år:
+        Savings per year:
     </div>
     <div class="col-2">
-        <input type="text" @bind-value="@(savingsPerYear)" style="max-width: 100px;"/> kr
+        <input type="text" @bind-value="@(savingsPerYear)" style="max-width: 100px;"/>
     </div>
     <div class="col-2">
-        Aktuellt sparande:
+        Current savings:
     </div>
     <div class="col-2">
-        <input type="text" @bind-value="@(savingsBalanceToStartWith)" style="max-width: 100px;" /> kr
+        <input type="text" @bind-value="@(savingsBalanceToStartWith)" style="max-width: 100px;" />
     </div>
 </div>
 <div class="row space-below">
     <div class="col-2">
-        Avkastning 1:
+        Payoff 1:
     </div>
     <div class="col-2">
         <input type="text" @bind-value="@(payoff1)" style="max-width: 100px;" /> %
     </div>
     <div class="col-2">
-        Avkastning 2:
+        Payoff 2:
     </div>
     <div class="col-2">
         <input type="text" @bind-value="@(payoff2)" style="max-width: 100px;" /> %
     </div>
     <div class="col-2">
-        Avkastning 3:
+        Payoff 3:
     </div>
     <div class="col-2">
         <input type="text" @bind-value="@(payoff3)" style="max-width: 100px;" /> %
@@ -65,20 +65,20 @@
 </div>
 <div class="row space-below">
     <div class="col-2">
-        <button type="button" class="btn btn-primary" @onclick=@Recalc>Räkna om</button>
+        <button type="button" class="btn btn-primary" @onclick=@Recalc>Recalculate</button>
     </div>
 </div>
 
 @if (accountSummaryAllYears == null)
 {
-    <p><em>Laddar...</em></p>
+    <p><em>Loading...</em></p>
 }
 else
 {
      <table class="table table-striped">
         <thead>
             <tr>
-                <th>År</th>
+                <th>Year</th>
                 <th class="text-end">@payoff1 %</th>
                 <th class="text-end">@payoff2 %</th>
                 <th class="text-end">@payoff3 %</th>

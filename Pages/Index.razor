@@ -6,15 +6,15 @@
 @inject DbService DbService
 @inject IConfiguration Configuration
 
-<PageTitle>CashKoll - sammanställning</PageTitle>
+<PageTitle>CashKoll - home</PageTitle>
 
-<h1>Sammanställning</h1>
+<h1>Summary</h1>
 
-<h2>Per år</h2>
+<h2>Per year</h2>
 
 <div class="row space-below">
     <div class="col-2">
-        Visa från år:
+        Show from year:
     </div>
     <div class="col-2">
         <select @bind="@sinceYear" style="min-width: 100px;">
@@ -25,24 +25,24 @@
         </select>
     </div>
     <div class="col-2">
-        <input type="checkbox" @bind="@showPerMonth" />Visa per månad
+        <input type="checkbox" @bind="@showPerMonth" />Show per month
     </div>
     <div class="col-3">
-        <input type="checkbox" @bind="@showDiff" />Visa skillnad mot föregående
+        <input type="checkbox" @bind="@showDiff" />Show difference
     </div>
 
 </div>
 
 @if (accountSummaryAllYears == null)
 {
-    <p><em>Laddar...</em></p>
+    <p><em>Loading...</em></p>
 }
 else
 {
      <table class="table table-striped">
         <thead>
             <tr>
-                <th>Kategori</th>
+                <th>Category</th>
                 @foreach (var year in allYears.Where(y => y >= sinceYear))
                 {
                     <th class="text-end">@($"{year}")</th>
@@ -65,17 +65,16 @@ else
                         {
                             @if (diffPercentage > 5)
                             {
-                                <td class="text-end">@($"{val:0}") <span class="oi oi-arrow-circle-top green-icon" title="Ökat med @($"{diffPercentage:0.0}%") (@($"{diff:0}kr)")"></span></td>
+                                <td class="text-end">@($"{val:0}") <span class="oi oi-arrow-circle-top green-icon" title="Increased with @($"{diffPercentage:0.0}%") (@($"{diff:0})")"></span></td>
                             }
                             else if (diffPercentage < -5)
                             {
-                                <td class="text-end">@($"{val:0}") <span class="oi oi-arrow-circle-bottom red-icon" title="Minskat med @($"{-diffPercentage:0.0}%") (@($"{-diff:0}kr)")"></span></td>
+                                <td class="text-end">@($"{val:0}") <span class="oi oi-arrow-circle-bottom red-icon" title="Decreased with @($"{-diffPercentage:0.0}%") (@($"{-diff:0})")"></span></td>
                             }
                             else
                             {
-                                <td class="text-end">@($"{val:0}") <span class="oi oi-arrow-circle-right grey-icon" title="Skillnad @($"{diffPercentage:0.0}%") (@($"{diff:0}kr)")"></span></td>
+                                <td class="text-end">@($"{val:0}") <span class="oi oi-arrow-circle-right grey-icon" title="Difference @($"{diffPercentage:0.0}%") (@($"{diff:0})")"></span></td>
                             }
-                            
                         }
                         else
                         {
@@ -86,7 +85,7 @@ else
                 </tr>
             }
             <tr>
-                <td><b>Summa:</b></td>
+                <td><b>Sum:</b></td>
                 @foreach (var year in allYears.Where(y => y >= sinceYear))
                 {
                     <td class="text-end">@($"{accountSummaryAllYears.Where(s => s.Year == year).Select(s => s.Amount).Sum()/(showPerMonth ? 12 : 1):0}")</td>
@@ -96,7 +95,7 @@ else
     </table>
 }
 
-<h2>Per månad</h2>
+<h2>Per month</h2>
 
 <div class="row space-below">
     <div class="col">
@@ -119,14 +118,14 @@ else
 
 @if (accountSummaryThisYear == null)
 {
-    <p><em>Laddar...</em></p>
+    <p><em>Loading...</em></p>
 }
 else
 {
      <table class="table table-striped">
         <thead>
             <tr>
-                <th>Kategori</th>
+                <th>Category</th>
                 @foreach (var month in accountSummaryThisYear.Select(s => s.Month).Distinct())
                 {
                     @foreach (var year in accountSummaryThisYear.Select(s => s.Year).Distinct())
@@ -152,7 +151,7 @@ else
                 </tr>
             }
             <tr>
-                <td><b>Summa:</b></td>
+                <td><b>Sum:</b></td>
                 @foreach (var year in years)
                 {
                     foreach (var month in months)

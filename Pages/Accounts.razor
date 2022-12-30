@@ -7,14 +7,14 @@
 @inject IConfiguration Configuration
 @inject IJSRuntime JsRuntime
 
-<PageTitle>CashKoll - Konton</PageTitle>
+<PageTitle>CashKoll - Transactions</PageTitle>
 
-<h1>Konton</h1>
+<h1>Transactions</h1>
 
 <div class="container-fluid">
     <div class="row space-below">
         <div class="col-1">
-            Konton: 
+            Accounts: 
         </div>
         <div class="col-2">
             <select @bind="@SelectedAccountId" style="min-width: 150px;">
@@ -25,25 +25,25 @@
             </select> 
         </div>
         <div class="col-7 text-end">
-            <button class="btn btn-primary" style="min-width: 100px; margin-right: 6.5em;" @onclick="AddNew">Lägg till</button>
+            <button class="btn btn-primary" style="min-width: 100px; margin-right: 6.5em;" @onclick="AddNew">Add...</button>
         </div>
     </div>
 
     <div class="row">
         <div class="col-1">
-            Från:
+            From:
         </div>
         <div class="col-2">
             <input type="date" style="min-width: 150px" @bind-value="From">
         </div>
         <div class="col-1">
-            Till:
+            To:
         </div>
         <div class="col-2">
             <input type="date" style="min-width: 150px" @bind-value="To">
         </div>
         <div class="col-1">
-            Kategori:
+            Category:
         </div>
         <div class="col-2">
             <select @bind="@(CategoryId)" style="min-width: 150px;">
@@ -57,7 +57,7 @@
     </div>
     <div class="row" style="margin-top: 1em; margin-bottom: 1em;">
         <div class="col-1">
-            Beskrivning:
+            Description:
         </div>
         <div class="col-5">
             <input type="text" style="width: 100%;" @bind-value="@(SearchText)">
@@ -66,12 +66,12 @@
     <div class="row"></div>
     <div class="grid">
         <QuickGrid Items="@accountLines" Pagination="@pagination">
-            <PropertyColumn Property="@(l => l.Timestamp)" Title="Datum" Format="yyyy-MM-dd" Sortable="true" />
-            <PropertyColumn Property="@(l => l.Description)" Title="Beskrivning"/>
-            <PropertyColumn Property="@(l => $"{l.Amount/1000:0.00}")" Title="Belopp" />
-            <PropertyColumn Property="@(l => $"{l.Balance/1000:0.00}")" Title="Saldo" />
-            <PropertyColumn Property="@(l => l.CategoryName)" Title="Kategori" />
-            <TemplateColumn Title="Åtgärder">
+            <PropertyColumn Property="@(l => l.Timestamp)" Title="Date" Format="yyyy-MM-dd" Sortable="true" />
+            <PropertyColumn Property="@(l => l.Description)" Title="Description"/>
+            <PropertyColumn Property="@(l => $"{l.Amount/1000:0.00}")" Title="Amount" />
+            <PropertyColumn Property="@(l => $"{l.Balance/1000:0.00}")" Title="Balance" />
+            <PropertyColumn Property="@(l => l.CategoryName)" Title="Category" />
+            <TemplateColumn Title="Actions">
                 <button @onclick="@(() => EditTrans(context))" class="btn btn-primary"><span class="oi oi-pencil"></span></button>
                 <button @onclick="@(() => DeleteTrans(context))" class="btn btn-primary"><span class="oi oi-circle-x"></span></button>
             </TemplateColumn>
@@ -80,7 +80,7 @@
     <Paginator Value="@pagination" />
     <div class="row">
         <div class="col">
-            Summa: <b>@($"{totalSum:0}")</b>
+            Sum: <b>@($"{totalSum:0}")</b>
         </div>
     </div>
 </div>
@@ -100,7 +100,7 @@
                 <div class="modal-body container">
                     <div class="row">
                         <div class="col">
-                            Konto:
+                            Account:
                         </div>
                         <div class="col">
                             <select @bind="@(SelectedAccountLine.Account)" style="min-width: 300px;">
@@ -113,7 +113,7 @@
                     </div>
                     <div class="row">
                         <div class="col">
-                            Datum:
+                            Date:
                         </div>
                         <div class="col">
                             <input type="date" @bind="@(SelectedAccountLine.Timestamp)" style="min-width: 300px;" />
@@ -121,7 +121,7 @@
                     </div>
                     <div class="row">
                         <div class="col">
-                            Beskrivning:
+                            Description:
                         </div>
                         <div class="col">
                             <input type="text" @bind="@(SelectedAccountLine.Description)" style="min-width: 300px;" />
@@ -129,7 +129,7 @@
                     </div>
                     <div class="row">
                         <div class="col">
-                            Belopp:
+                            Amount:
                         </div>
                         <div class="col">
                             <input value="@(SelectedAccountLine.AmountAsString())" @onchange="@((ChangeEventArgs __e) => SelectedAccountLine.UpdateAmount(__e?.Value?.ToString()))" style="min-width: 300px;"/>
@@ -137,7 +137,7 @@
                     </div>
                     <div class="row">
                         <div class="col">
-                            Saldo:
+                            Balance:
                         </div>
                         <div class="col">
                             <input value="@(SelectedAccountLine.BalanceAsString())" @onchange="@((ChangeEventArgs __e) => SelectedAccountLine.UpdateBalance(__e?.Value?.ToString()))" style="min-width: 300px;"/>
@@ -145,7 +145,7 @@
                     </div>
                     <div class="row">
                         <div class="col">
-                            Kategori:
+                            Category:
                         </div>
                         <div class="col">
                             <select @bind="@(SelectedAccountLine.Category)" style="min-width: 300px;">
@@ -162,7 +162,7 @@
                 <!-- Modal footer -->
                 <div class="modal-footer">
                     <button type="button" class="btn" @onclick="@ModalCancel">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick=@ModalOk>Spara</button>
+                    <button type="button" class="btn btn-primary" @onclick=@ModalOk>Save</button>
                 </div>
 
             </div>
@@ -175,7 +175,7 @@
     PaginationState pagination = new PaginationState { ItemsPerPage = 100 };
     private IQueryable<AccountLine> accountLines = (new List<AccountLine>()).AsQueryable();
     private IEnumerable<Category> categories;
-    private string modalHeader = "Redigera transaktion";
+    private string modalHeader = "Edit transaction";
     private int DefaultCategory = 10;
 
     bool showModal = false;
@@ -238,7 +238,7 @@
     private double totalSum;
 
     void EditTrans(AccountLine context) {
-        modalHeader = "Redigera transaktion";
+        modalHeader = "Edit transaction";
         SelectedAccountLine = context;
         Console.WriteLine($"{SelectedAccountLine.Description}");
         showModal = true;
@@ -246,7 +246,7 @@
 
     private void AddNew()
     {
-        modalHeader = "Ny transaktion";
+        modalHeader = "New transaction";
         SelectedAccountLine = new AccountLine() 
         {
             Id = 0,
@@ -261,7 +261,7 @@
         showModal = true;
     }
     async void DeleteTrans(AccountLine context) {
-        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Radera transaktion?");
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Delete transaction?");
         Console.WriteLine($"Confirm delete: {confirmed}");
         if (confirmed)
         {
