@@ -8,7 +8,6 @@ This project started with and Excel sheet I've been using to track my personal f
 * Local SQLite database
 * CSV import of data, <a href="https://www.nordea.se/">Nordea</a> CSV format supported by default
 * Using Blazor for UI
-* For now UI only in Swedish
 * Your finance data never leaves your computer
 
 ## Screeshot
