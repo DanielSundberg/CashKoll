@@ -56,7 +56,8 @@ else
                     <td>@cat</td>
                     @foreach (var year in allYears.Where(y => y >= sinceYear))
                     {
-                        int nofMonthsForYear = year == DateTime.Now.Year ? DateTime.Now.Month : 12; 
+                        var now = DateTime.Now;
+                        int nofMonthsForYear = year == now.Year ? Math.Max(now.Month - 1, 1) : 12; 
                         var val = Math.Abs(summaryPerYearDict[(year, cat)]/(showPerMonth ? nofMonthsForYear : 1));
                         var prev = Math.Abs(summaryPerYearDict[(year-1, cat)]/(showPerMonth ? nofMonthsForYear : 1));
                         var diff = val - prev;
